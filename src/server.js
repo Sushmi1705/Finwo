@@ -9,10 +9,9 @@ const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
 
-// Apply authenticate middleware to all routes below
-app.use(authenticate);
-
 app.use('/api/auth', authRoutes);
+// Apply authenticate middleware to all routes below
+// app.use(authenticate);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/shops', shopRoutes);
 
