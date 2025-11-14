@@ -1,0 +1,385 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// 1. USER MODEL (Updated with additional fields)
+// ============================================
+model User {
+  id              String     @id @default(uuid())
+  name            String
+  email           String?    @unique
+  mobile          String     @unique
+  password        String
+  otpCode         String?    @map("otp_code")
+  securityPin     String?    @map("security_pin")
+  profileImageUrl String?    @map("profile_image_url")
+  isAdmin         Boolean    @default(false) @map("is_admin")
+  status          UserStatus @default(ACTIVE)
+  createdAt       DateTime   @default(now()) @map("created_at")
+  lastLogin       DateTime?  @map("last_login")
+
+  // Relations
+  reviews       Review[]
+  reviewReplies ReviewReply[]
+  savedShops    SavedShop[]
+  transactions  Transaction[]
+  payouts       Payout[]
+  reports       Report[]
+  settings      Setting?
+
+  @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+}
+
+// ============================================
+// 2. MAIN CATEGORY
+// ============================================
+model MainCategory {
+  id        String   @id @default(uuid())
+  name      String   @map("category_name")
+  imageUrl  String?  @map("image_url")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  shops   Shop[]
+  banners CategoryBanner[]
+
+  @@map("main_categories")
+}
+
+// ============================================
+// 3. SHOP
+// ============================================
+model Shop {
+  id          String   @id @default(uuid())
+  categoryId  String   @map("category_id")
+  name        String
+  logoUrl     String?  @map("logo_url")
+  description String?
+  reviewDescription String?  @map("review_description")  // New field for review summary
+  address     String?
+  city        String?
+  latitude    Float?
+  longitude   Float?
+  phoneNumber String?  @map("phone_number")
+  websiteUrl  String?  @map("website_url")
+  chatLink    String?  @map("chat_link")
+  openHours   String?  @map("open_hours")
+  avgRating   Float?   @default(0)
+  reviewCount Int      @default(0) @map("review_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  category  MainCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  images    ShopImage[]
+  offers    ShopOffer[]
+  amenities ShopAmenity[]
+  menus     Menu[]
+  reviews   Review[]
+  savedBy   SavedShop[]
+  qrCodes   QRCode[]
+
+  @@map("shops")
+}
+
+// ============================================
+// 4. SHOP IMAGES
+// ============================================
+model ShopImage {
+  id        String  @id @default(uuid())
+  shopId    String  @map("shop_id")
+  imageUrl  String  @map("image_url")
+  isPrimary Boolean @default(false) @map("is_primary")
+
+  // Relations
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("shop_images")
+}
+
+// ============================================
+// 5. SHOP OFFERS
+// ============================================
+model ShopOffer {
+  id          String    @id @default(uuid())
+  shopId      String    @map("shop_id")
+  title       String
+  description String?
+  validFrom   DateTime? @map("valid_from")
+  validTo     DateTime? @map("valid_to")
+  terms       String?
+  isActive    Boolean   @default(true) @map("is_active")
+
+  // Relations
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("shop_offers")
+}
+
+// ============================================
+// 6. SHOP AMENITIES
+// ============================================
+model ShopAmenity {
+  id          String  @id @default(uuid())
+  shopId      String  @map("shop_id")
+  name        String
+  icon        String?
+  isAvailable Boolean @default(true) @map("is_available")
+
+  // Relations
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("shop_amenities")
+}
+
+// ============================================
+// 7. MENU
+// ============================================
+model Menu {
+  id           String  @id @default(uuid())
+  shopId       String  @map("shop_id")
+  itemName     String  @map("item_name")
+  description  String?
+  price        Float
+  quantity     Int?     // New optional field for piece count per set
+  imageUrl     String? @map("image_url")
+  categoryName String? @map("category_name")
+  isAvailable  Boolean @default(true) @map("is_available")
+
+  // Relations
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("menus")
+}
+
+// ============================================
+// 8. REVIEW TAGS
+// ============================================
+model ReviewTag {
+  id          String  @id @default(uuid())
+  tagName     String  @unique @map("tag_name")
+  description String?
+
+  // Relations
+  reviewLinks ReviewTagLink[]
+
+  @@map("review_tags")
+}
+
+// ============================================
+// 9. REVIEWS
+// ============================================
+model Review {
+  id        String   @id @default(uuid())
+  shopId    String   @map("shop_id")
+  userId    String   @map("user_id")
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  shop    Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags    ReviewTagLink[]
+  replies ReviewReply[]
+
+  @@map("reviews")
+}
+
+// ============================================
+// 10. REVIEW TAG LINKS (Many-to-Many)
+// ============================================
+model ReviewTagLink {
+  id       String @id @default(uuid())
+  reviewId String @map("review_id")
+  tagId    String @map("tag_id")
+
+  // Relations
+  review Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  tag    ReviewTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, tagId])
+  @@map("review_tag_links")
+}
+
+// ============================================
+// 11. REVIEW REPLIES (Admin Only)
+// ============================================
+model ReviewReply {
+  id        String   @id @default(uuid())
+  reviewId  String   @map("review_id")
+  adminId   String   @map("admin_id")
+  message   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  admin  User   @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("review_replies")
+}
+
+// ============================================
+// 12. SAVED SHOPS (User Favorites)
+// ============================================
+model SavedShop {
+  id      String   @id @default(uuid())
+  userId  String   @map("user_id")
+  shopId  String   @map("shop_id")
+  savedAt DateTime @default(now()) @map("saved_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, shopId])
+  @@map("saved_shops")
+}
+
+// ============================================
+// 13. TRANSACTIONS
+// ============================================
+model Transaction {
+  id          String            @id @default(uuid())
+  userId      String            @map("user_id")
+  txnType     TransactionType   @map("txn_type")
+  source      TransactionSource
+  amount      Float
+  description String?
+  status      TransactionStatus @default(PENDING)
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum TransactionSource {
+  WALLET
+  QR_SCAN
+  PAYOUT
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+// ============================================
+// 14. PAYOUTS
+// ============================================
+model Payout {
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  requestDate   DateTime      @default(now()) @map("request_date")
+  payoutDate    DateTime?     @map("payout_date")
+  amount        Float
+  paymentMethod PaymentMethod @map("payment_method")
+  status        PayoutStatus  @default(PENDING)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("payouts")
+}
+
+enum PaymentMethod {
+  BANK
+  UPI
+  WALLET
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+// ============================================
+// 15. REPORTS
+// ============================================
+model Report {
+  id             String   @id @default(uuid())
+  userId         String   @unique @map("user_id")
+  totalEarned    Float    @default(0)
+  totalSpent     Float    @default(0)
+  monthlySummary Json?    @map("monthly_summary")
+  lastUpdated    DateTime @default(now()) @updatedAt @map("last_updated")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("reports")
+}
+
+model CategoryBanner {
+  id             String   @id @default(uuid())
+  mainCategoryId String   @map("main_category_id")
+  imageUrl       String   @map("image_url")
+  title          String? // optional banner title
+  linkUrl        String? // optional link when banner clicked
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  mainCategory MainCategory @relation(fields: [mainCategoryId], references: [id], onDelete: Cascade)
+
+  @@map("category_banners")
+}
+
+// ============================================
+// 16. QR CODES
+// ============================================
+model QRCode {
+  id          String   @id @default(uuid())
+  linkedShop  String?  @map("linked_shop")
+  qrType      QRType   @map("qr_type")
+  data        String
+  generatedAt DateTime @default(now()) @map("generated_at")
+
+  // Relations
+  shop Shop? @relation(fields: [linkedShop], references: [id], onDelete: SetNull)
+
+  @@map("qr_codes")
+}
+
+enum QRType {
+  PAYMENT
+  INFO
+  REFERRAL
+}
+
+// ============================================
+// 17. SETTINGS
+// ============================================
+model Setting {
+  id                   String   @id @default(uuid())
+  userId               String   @unique @map("user_id")
+  notificationsEnabled Boolean  @default(true) @map("notifications_enabled")
+  darkMode             Boolean  @default(false) @map("dark_mode")
+  appLanguage          String   @default("en") @map("app_language")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("settings")
+}
