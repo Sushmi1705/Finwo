@@ -9,9 +9,19 @@ const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
 
+// Public routes (no token required)
 app.use('/api/auth', authRoutes);
-// Apply authenticate middleware to all routes below
-// app.use(authenticate);
+
+// For all routes below, run authenticate EXCEPT /api/auth
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/auth')) {
+    // skip authentication for auth routes
+    return next();
+  }
+  return authenticate(req, res, next);
+});
+
+// Protected routes
 app.use('/api/categories', categoryRoutes);
 app.use('/api/shops', shopRoutes);
 

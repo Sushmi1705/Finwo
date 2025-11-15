@@ -12,10 +12,10 @@ datasource db {
 // ============================================
 model User {
   id              String     @id @default(uuid())
-  name            String
+  name            String?
   email           String?    @unique
   mobile          String     @unique
-  password        String
+  password        String?
   otpCode         String?    @map("otp_code")
   securityPin     String?    @map("security_pin")
   profileImageUrl String?    @map("profile_image_url")
@@ -23,6 +23,7 @@ model User {
   status          UserStatus @default(ACTIVE)
   createdAt       DateTime   @default(now()) @map("created_at")
   lastLogin       DateTime?  @map("last_login")
+  phoneAuthEnabled  Boolean  @default(false)
 
   // Relations
   reviews       Review[]
