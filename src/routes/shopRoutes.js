@@ -7,6 +7,7 @@ import {
   getShopAmenities,
   getShopMenu
 } from '../controllers/shopController.js';
+// import { authenticate } from './middleware/authenticate.js';
 
 const router = express.Router();
 

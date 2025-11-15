@@ -13,13 +13,13 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 
 // For all routes below, run authenticate EXCEPT /api/auth
-app.use((req, res, next) => {
-  if (req.path.startsWith('/api/auth')) {
-    // skip authentication for auth routes
-    return next();
-  }
-  return authenticate(req, res, next);
-});
+// app.use((req, res, next) => {
+//   if (req.path.startsWith('/api/auth')) {
+//     // skip authentication for auth routes
+//     return next();
+//   }
+//   return authenticate(req, res, next);
+// });
 
 // Protected routes
 app.use('/api/categories', categoryRoutes);
