@@ -1,3 +1,4 @@
+// twilioClient.js
 import twilio from 'twilio';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -8,19 +9,20 @@ console.log('Using TWILIO_SERVICE_SID:', serviceSid);
 
 const client = twilio(accountSid, authToken);
 
-// Send OTP
-export const sendOTP = (phoneNumber) => {
-  console.log('Sending OTP to:', phoneNumber);
+// Send OTP via SMS or WhatsApp
+// channel can be 'sms' or 'whatsapp'
+export const sendOTP = (phoneNumber, channel = 'sms') => {
+  console.log(`Sending OTP to: ${phoneNumber} via ${channel}`);
   return client.verify.v2
     .services(serviceSid)
     .verifications
     .create({
       to: phoneNumber,
-      channel: 'sms',
+      channel: channel,  // 'sms' or 'whatsapp'
     });
 };
 
-// Verify OTP
+// Verify OTP (same for both SMS and WhatsApp)
 export const verifyOTP = (phoneNumber, code) => {
   console.log('Verifying OTP for:', phoneNumber, 'code:', code);
   return client.verify.v2

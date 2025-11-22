@@ -1,3 +1,4 @@
+// authController.js
 import prisma from '../services/prismaClient.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -6,20 +7,31 @@ import { sendOTP, verifyOTP } from '../../twilioClient.js';
 const JWT_SECRET = process.env.JWT_SECRET;
 const SALT_ROUNDS = 10;
 
-// Step 1: Send OTP
+// Step 1: Send OTP (SMS or WhatsApp)
 export const requestOTP = async (req, res) => {
     try {
-        const { mobile } = req.body;
-        if (!mobile) return res.status(400).json({ error: 'Mobile number required' });
+        const { mobile, channel } = req.body;  // channel: 'sms' or 'whatsapp'
+        
+        if (!mobile) {
+            return res.status(400).json({ error: 'Mobile number required' });
+        }
 
-        await sendOTP(mobile);
-        res.json({ message: 'OTP sent successfully' });
+        // Default to SMS if channel not provided
+        const otpChannel = channel === 'whatsapp' ? 'whatsapp' : 'sms';
+
+        await sendOTP(mobile, otpChannel);
+        
+        res.json({ 
+            message: `OTP sent successfully via ${otpChannel}`,
+            channel: otpChannel 
+        });
     } catch (error) {
         console.error('Error sending OTP:', error);
         res.status(500).json({ error: 'Failed to send OTP' });
     }
 };
 
+// Step 2: Verify OTP and Login (same for both SMS and WhatsApp)
 export const verifyOTPAndLogin = async (req, res) => {
     try {
         console.log('verify-otp body:', req.body);
@@ -58,8 +70,8 @@ export const verifyOTPAndLogin = async (req, res) => {
         return res.status(500).json({ error: 'Failed to verify OTP' });
     }
 };
+
 // Step 3: Set security PIN
-// body: { userId, pin, enablePhoneAuth }
 export const setSecurityPin = async (req, res) => {
     try {
         const { userId, pin, enablePhoneAuth } = req.body;
@@ -73,7 +85,7 @@ export const setSecurityPin = async (req, res) => {
             where: { id: userId },
             data: {
                 securityPin: pinHash,
-                phoneAuthEnabled: !!enablePhoneAuth,   // save user’s choice
+                phoneAuthEnabled: !!enablePhoneAuth,
             },
         });
 

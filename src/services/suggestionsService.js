@@ -61,14 +61,13 @@ async function getNearMeShops({ userLat, userLng, radiusKm }) {
     return processed;
 }
 
+// ========== 2. GET QUICK SNACK SHOPS ==========
 async function getQuickSnackShops({ userLat, userLng, radiusKm, config, category }) {
     const chips = Array.isArray(config.chips) ? config.chips : [];
     const minRating = typeof config.minRating === 'number' ? config.minRating : 0;
 
-    // If category param is passed, we focus on just that one
-    const targetCategories = category
-        ? [category]
-        : chips;
+    // If category param is passed, focus on just that one
+    const targetCategories = category ? [category] : chips;
 
     const shops = await prisma.shop.findMany({
         where: {
@@ -95,7 +94,19 @@ async function getQuickSnackShops({ userLat, userLng, radiusKm, config, category
             if (userLat && userLng && s.latitude && s.longitude) {
                 distanceKm = calculateDistance(userLat, userLng, s.latitude, s.longitude);
             }
-            return { ...formatShopForCard(s), distanceKm };
+
+            // Filter menu items to only show matching category items
+            let filteredMenus = s.menus;
+            if (category) {
+                filteredMenus = s.menus.filter(m => m.categoryName === category);
+            } else if (targetCategories.length) {
+                filteredMenus = s.menus.filter(m => targetCategories.includes(m.categoryName));
+            }
+
+            return {
+                ...formatShopForCard({ ...s, menus: filteredMenus }),
+                distanceKm
+            };
         })
         .filter(s => s.rating >= minRating);
 
@@ -108,11 +119,12 @@ async function getQuickSnackShops({ userLat, userLng, radiusKm, config, category
     return processed;
 }
 
+// ========== 3. GET QUICK SNACK CATEGORIES (Browse by category) ==========
 async function getQuickSnackCategories({ userLat, userLng, radiusKm, config }) {
     const chips = Array.isArray(config.chips) ? config.chips : [];
     const minRating = typeof config.minRating === 'number' ? config.minRating : 0;
 
-    // 1) Find candidate shops (same logic as Quick Snack, but broader)
+    // 1) Find candidate shops
     const shops = await prisma.shop.findMany({
         where: {
             isActive: true,
@@ -137,6 +149,7 @@ async function getQuickSnackCategories({ userLat, userLng, radiusKm, config }) {
             menus: {
                 where: { isAvailable: true },
                 select: {
+                    id: true,
                     categoryName: true,
                 },
             },
@@ -152,12 +165,11 @@ async function getQuickSnackCategories({ userLat, userLng, radiusKm, config }) {
             return distanceKm <= radiusKm;
         }
 
-        // If no location, accept all (or you can choose to reject; we accept)
         return true;
     });
 
-    // 3) Collect unique category names from menus
-    const categorySet = new Set();
+    // 3) Collect unique category names + count items
+    const categoryMap = new Map(); // categoryName -> { name, itemCount }
 
     for (const shop of withinRadiusShops) {
         for (const menu of shop.menus) {
@@ -165,15 +177,20 @@ async function getQuickSnackCategories({ userLat, userLng, radiusKm, config }) {
             const name = menu.categoryName.trim();
             if (!name) continue;
 
-            // If chips configured, optionally restrict to them
+            // If chips configured, restrict to them
             if (chips.length && !chips.includes(name)) continue;
 
-            categorySet.add(name);
+            if (!categoryMap.has(name)) {
+                categoryMap.set(name, { name, itemCount: 0 });
+            }
+            categoryMap.get(name).itemCount += 1;
         }
     }
 
     // 4) Convert to sorted array
-    const categories = Array.from(categorySet).sort();
+    const categories = Array.from(categoryMap.values()).sort((a, b) =>
+        a.name.localeCompare(b.name)
+    );
 
     return categories;
 }

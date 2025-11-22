@@ -7,6 +7,7 @@ import {
     getFallbackSuggestionShops,
     getQuickSnackCategories,   // ← NEW
 } from '../services/suggestionsService.js';  // ← ADD THIS
+import {getGlobalRadiusKm} from '../services/config.js';
 
 export const getSuggestions = async (req, res) => {
     try {
@@ -66,8 +67,9 @@ export const getSuggestionShops = async (req, res) => {
         const config = section.config || {};
         const userLat = lat ? parseFloat(lat) : null;
         const userLng = lng ? parseFloat(lng) : null;
-        const baseRadius = radius ? parseFloat(radius) : (config.maxDistanceKm || 7);
-
+        const baseRadius = radius ? parseFloat(radius) : (config.maxDistanceKm || 0);
+        console.log('70----------', config.maxDistanceKm);
+        console.log('71----------', baseRadius);
         let shops = [];
 
         switch (section.type) {
@@ -119,10 +121,11 @@ export const getSuggestionShops = async (req, res) => {
     }
 };
 
+// ========== 2. GET QUICK SNACK CATEGORIES (Browse by category) ==========
 export const getQuickSnackMenuCategories = async (req, res) => {
     try {
-        const { sectionId } = req.params;
-        const { lat, lng, radius } = req.query;
+        const { sectionId, lat, lng } = req.params;
+        // const { lat, lng } = req.query;
 
         const section = await prisma.suggestionSection.findUnique({
             where: { id: sectionId },
@@ -135,7 +138,8 @@ export const getQuickSnackMenuCategories = async (req, res) => {
         const config = section.config || {};
         const userLat = lat ? parseFloat(lat) : null;
         const userLng = lng ? parseFloat(lng) : null;
-        const baseRadius = radius ? parseFloat(radius) : (config.maxDistanceKm || 5);
+        const baseRadius = await getGlobalRadiusKm(5);
+        console.log('142-----------------', baseRadius);
 
         const categories = await getQuickSnackCategories({
             userLat,
