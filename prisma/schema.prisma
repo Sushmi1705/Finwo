@@ -165,6 +165,7 @@ model MainCategory {
   banners CategoryBanner[]
   suggestionSections SuggestionSection[]  // ← ADD THIS
   suggestionItems    SuggestionItem[]     // ← ADD THIS
+  appUiConfigs       AppUiConfig[]        // ← ADD THIS LINE
 
   @@map("main_categories")
 }
@@ -504,4 +505,70 @@ model Setting {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("settings")
+}
+
+// ========================================
+// CONFIGURATION SYSTEM - ENUMS
+// ========================================
+
+enum ScreenName {
+  LANDING_PAGE
+  SUGGESTIONS
+  NEAR_ME
+}
+
+enum ComponentType {
+  SECTION      // Main sections like "Locate", "Suggestions", "Review"
+  CHIP         // Category chips like "Food & Beverage", "Fashion"
+  BANNER       // Promotional banners
+}
+
+enum BehaviourType {
+  STATIC           // Just display, no special logic
+  NEAR_ME          // Show nearby shops based on location
+  QUICK_SNACK      // Show quick snack menu items
+  CATEGORY_BASED   // Show shops from a specific MainCategory
+  CUSTOM_QUERY     // Custom search query
+}
+
+// ========================================
+// MAIN CONFIGURATION TABLE
+// ========================================
+
+model AppUiConfig {
+  id            String         @id @default(uuid())
+  screenName    ScreenName     @map("screen_name")
+  componentType ComponentType  @map("component_type")
+  componentName String         @map("component_name")  // "Locate", "Food & Beverages", "Banner-1"
+  behaviour     BehaviourType  @default(STATIC)
+  
+  // Visual assets
+  iconUrl       String?        @map("icon_url")
+  imageUrl      String?        @map("image_url")
+  
+  // Location-specific (for NearME banners/chips)
+  location      String?        // "Chennai", "Coimbatore", "Madurai"
+  
+  // Link to MainCategory (for category-based behaviour)
+  mainCategoryId String?       @map("main_category_id")
+  
+  // Configuration options (JSON for flexibility)
+  config        Json?          // { radiusKm: 7, maxItems: 10, query: "...", etc. }
+  
+  // Control
+  isActive      Boolean        @default(true) @map("is_active")
+  sortOrder     Int            @default(0) @map("sort_order")
+  
+  // Timestamps
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  mainCategory  MainCategory?  @relation(fields: [mainCategoryId], references: [id], onDelete: SetNull)
+
+  @@map("app_ui_config")
+  @@index([screenName, componentType, isActive])
+  @@index([location])
+  @@index([sortOrder])
+  @@index([mainCategoryId])
 }
