@@ -167,87 +167,120 @@ export async function getCompareList(req, res) {
     }
 }
 
-// src/controllers/compareController.js
-// src/controllers/compareController.js
+// helper: haversine distance in kilometers
+function haversineDistanceKm(lat1, lon1, lat2, lon2) {
+  const toRad = v => (v * Math.PI) / 180;
+  const R = 6371; // Earth's radius in km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export async function getCompareResult(req, res) {
-    try {
-        // Accept either explicit ids param or identity
-        let shopIds = [];
-        if (req.query.ids) {
-            shopIds = req.query.ids.split(',').filter(Boolean);
-        } else {
-            const { userId, sessionId } = req.query;
-            if (!userId && !sessionId) return res.status(400).json({ error: 'Provide ids or identity' });
-            const list = await getOrCreateCompareList({ userId, sessionId });
-            const items = await prisma.compareItem.findMany({ where: { compareId: list.id } });
-            shopIds = items.map(i => i.shopId);
-        }
-
-        if (shopIds.length !== MAX_COMPARE) {
-            return res.status(400).json({ error: `Comparison expects exactly ${MAX_COMPARE} shops` });
-        }
-
-        // Limits for inline lists in compare screen
-        const REVIEWS_LIMIT = 10;
-        const IMAGES_LIMIT = 8;
-        const OFFERS_LIMIT = 5;
-
-        // Fetch shops with limited related items. Use the relation names on your Shop model:
-        const shops = await prisma.shop.findMany({
-            where: { id: { in: shopIds } },
-            include: {
-                images: { select: { id: true, imageUrl: true }, take: IMAGES_LIMIT },
-                offers: { where: { isActive: true }, select: { id: true, title: true, description: true, validFrom: true, validTo: true }, take: OFFERS_LIMIT },
-                amenities: { select: { name: true } },
-                // include full review objects (no select) — avoids unknown-field errors
-                reviews: { orderBy: { createdAt: 'desc' }, take: REVIEWS_LIMIT }
-            }
-        });
-
-        // Counts for each shop (totals)
-        const countsByShop = {};
-        await Promise.all(shopIds.map(async (id) => {
-            const [reviewsCount, photosCount, offersCount] = await Promise.all([
-                prisma.review.count({ where: { shopId: id } }),         // adjust model name if different
-                prisma.shopImage.count({ where: { shopId: id } }),     // adjust model name if different
-                prisma.shopOffer.count({ where: { shopId: id, isActive: true } }) // adjust model name if different
-            ]);
-            countsByShop[id] = { reviewsCount, photosCount, offersCount };
-        }));
-
-        // Build response in same order as shopIds
-        const result = shopIds.map(id => {
-            const s = shops.find(x => x.id === id);
-
-            return {
-                id: s.id,
-                name: s.name,
-                logoUrl: s.logoUrl || (s.images && s.images[0]?.imageUrl) || null,
-                avgRating: s.avgRating,
-                basicDetails: {
-                    cuisine: s.cuisine || s.description || null,
-                    openHours: s.openHours || null
-                },
-                locationDetails: {
-                    address: s.address || null,
-                    latitude: s.latitude,
-                    longitude: s.longitude
-                },
-                // Inline previews
-                reviewsPreview: s.reviews || [],   // full review objects (whatever fields your schema defines)
-                photosPreview: s.images || [],
-                offersPreview: s.offers || [],
-                // Totals
-                reviewsCount: countsByShop[id]?.reviewsCount || 0,
-                photosCount: countsByShop[id]?.photosCount || 0,
-                offersCount: countsByShop[id]?.offersCount || 0,
-                amenities: (s.amenities || []).map(a => a.name)
-            };
-        });
-
-        return res.json({ status: 'ok', shops: result });
-    } catch (err) {
-        console.error('getCompareResult error', err);
-        return res.status(500).json({ error: 'Internal Server Error' });
+  try {
+    // Accept either explicit ids param or identity
+    let shopIds = [];
+    if (req.query.ids) {
+      shopIds = req.query.ids.split(',').filter(Boolean);
+    } else {
+      const { userId, sessionId } = req.query;
+      if (!userId && !sessionId) return res.status(400).json({ error: 'Provide ids or identity' });
+      const list = await getOrCreateCompareList({ userId, sessionId });
+      const items = await prisma.compareItem.findMany({ where: { compareId: list.id }});
+      shopIds = items.map(i => i.shopId);
     }
+
+    if (shopIds.length !== MAX_COMPARE) {
+      return res.status(400).json({ error: `Comparison expects exactly ${MAX_COMPARE} shops` });
+    }
+
+    // Parse user location (optional)
+    const userLat = req.query.lat ? parseFloat(req.query.lat) : null;
+    const userLng = req.query.lng ? parseFloat(req.query.lng) : null;
+    const haveUserLocation = Number.isFinite(userLat) && Number.isFinite(userLng);
+
+    // Limits for inline lists
+    const REVIEWS_LIMIT = 10;
+    const IMAGES_LIMIT = 8;
+    const OFFERS_LIMIT = 5;
+
+    // Fetch shops with related previews (adjust relation names if needed)
+    const shops = await prisma.shop.findMany({
+      where: { id: { in: shopIds } },
+      include: {
+        images: { select: { id: true, imageUrl: true }, take: IMAGES_LIMIT },
+        offers: { where: { isActive: true }, select: { id: true, title: true, description: true, validFrom: true, validTo: true }, take: OFFERS_LIMIT },
+        amenities: { select: { name: true } },
+        reviews: { orderBy: { createdAt: 'desc' }, take: REVIEWS_LIMIT }
+      }
+    });
+
+    // Totals counts for each shop (adjust model names if different)
+    const countsByShop = {};
+    await Promise.all(shopIds.map(async (id) => {
+      const [reviewsCount, photosCount, offersCount] = await Promise.all([
+        prisma.review.count({ where: { shopId: id } }),
+        prisma.shopImage.count({ where: { shopId: id } }),
+        prisma.shopOffer.count({ where: { shopId: id, isActive: true } })
+      ]);
+      countsByShop[id] = { reviewsCount, photosCount, offersCount };
+    }));
+
+    // Build ordered response in same order as shopIds, adding distance
+    const result = shopIds.map(id => {
+      const s = shops.find(x => x.id === id);
+
+      // compute distance if user coords and shop coords exist
+      let distanceKm = null;
+      let distanceLabel = null;
+      let getDirectionUrl = null;
+
+      if (haveUserLocation && s?.latitude != null && s?.longitude != null) {
+        distanceKm = haversineDistanceKm(userLat, userLng, Number(s.latitude), Number(s.longitude));
+        // format: show in meters if < 1km optionally, but per your request we show km with 1 decimal
+        distanceLabel = `${distanceKm.toFixed(1)} km`;
+        // also provide a Google Maps direction url (useful for Get Direction button)
+        getDirectionUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(userLat + ',' + userLng)}&destination=${encodeURIComponent(s.latitude + ',' + s.longitude)}&travelmode=driving`;
+      }
+
+      return {
+        id: s.id,
+        name: s.name,
+        logoUrl: s.logoUrl || (s.images && s.images[0]?.imageUrl) || null,
+        avgRating: s.avgRating,
+        basicDetails: {
+          cuisine: s.cuisine || s.description || null,
+          openHours: s.openHours || null
+        },
+        locationDetails: {
+          address: s.address || null,
+          latitude: s.latitude,
+          longitude: s.longitude,
+          // new distance fields
+          distanceKm: distanceKm !== null ? Number(distanceKm.toFixed(3)) : null, // numeric value (3 decimals)
+          distanceLabel, // human readable "0.2 km"
+          getDirectionUrl
+        },
+        // Inline lists
+        reviewsPreview: s.reviews || [],
+        photosPreview: s.images || [],
+        offersPreview: s.offers || [],
+        // Totals
+        reviewsCount: countsByShop[id]?.reviewsCount || 0,
+        photosCount: countsByShop[id]?.photosCount || 0,
+        offersCount: countsByShop[id]?.offersCount || 0,
+        amenities: (s.amenities || []).map(a => a.name)
+      };
+    });
+
+    return res.json({ status: 'ok', shops: result });
+  } catch (err) {
+    console.error('getCompareResult error', err);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
 }
