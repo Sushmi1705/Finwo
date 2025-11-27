@@ -488,10 +488,27 @@ export const searchShops = async (req, res) => {
         });
         const allMenuCategories = Array.from(allMenuCategoriesSet);
 
+        // ✅ NEW: build category → first image map
+        const categoryImageMap = {};
+        shops.forEach(shop => {
+            if (shop.menus && shop.menus.length) {
+                shop.menus.forEach(menu => {
+                    if (menu.categoryName && menu.imageUrl && !categoryImageMap[menu.categoryName]) {
+                        categoryImageMap[menu.categoryName] = menu.imageUrl;
+                    }
+                });
+            }
+        });
+
+        const allMenuCategoriesWithImages = allMenuCategories.map(name => ({
+            name,
+            imageUrl: categoryImageMap[name] || null
+        }));
+
         res.json({
             query: searchTerm,
             chip: chipFilter || 'All',
-            allMenuCategories,
+            allMenuCategories: allMenuCategoriesWithImages,
             totalResults: processedShops.length,
             searchRadius,
             sortBy: sortOption,
