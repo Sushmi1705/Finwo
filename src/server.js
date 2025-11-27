@@ -6,6 +6,7 @@ import { authenticate } from './middleware/authenticate.js';
 import searchRoutes from './routes/searchRoutes.js';
 import suggestionRoutes from './routes/suggestionRoutes.js';
 import addressRoutes from './routes/addressRoutes.js';
+import compareRoutes from './routes/compareRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -30,6 +31,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/shops', shopRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api/compare', compareRoutes);
 
 app.get('/', (req, res) => {
   res.send('Server is running successfully!');

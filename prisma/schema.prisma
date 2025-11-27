@@ -203,7 +203,7 @@ model Shop {
   savedBy   SavedShop[]
   qrCodes   QRCode[]
   suggestionItems SuggestionItem[] // ← ADD THIS
-
+  compareItems CompareItem[]    // <-- add this line
   @@map("shops")
 }
 
@@ -571,4 +571,24 @@ model AppUiConfig {
   @@index([location])
   @@index([sortOrder])
   @@index([mainCategoryId])
+}
+
+model CompareList {
+  id        String       @id @default(uuid())
+  userId    String?                      // nullable for anonymous users
+  sessionId String?                      // nullable (use a cookie/session token for anon)
+  createdAt DateTime     @default(now())
+  items     CompareItem[]
+}
+
+model CompareItem {
+  id         String   @id @default(uuid())
+  compareId  String
+  shopId     String
+  addedAt    DateTime @default(now())
+
+  compare    CompareList @relation(fields: [compareId], references: [id], onDelete: Cascade)
+  shop       Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([compareId, shopId])
 }

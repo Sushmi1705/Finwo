@@ -8,6 +8,7 @@ import shopRoutes from './routes/shopRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
 import amenityRoutes from './routes/amenityRoutes.js';
 import menuRoutes from './routes/menuRoutes.js';
+import compareRoutes from './routes/compareRoutes.js';
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use('/api/shops', shopRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/amenities', amenityRoutes);
 app.use('/api/menus', menuRoutes);
+app.use('/api/compare', compareRoutes);
 
 // Test route
 app.get("/", (req, res) => {
