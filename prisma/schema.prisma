@@ -30,8 +30,8 @@ model User {
   reviewReplies ReviewReply[]
   savedShops    SavedShop[]
   transactions  Transaction[]
-  payouts       Payout[]
   reports       Report[]
+  payments      Payment[]        // ← add this line
   settings      Setting?
   searchHistory SearchHistory[]
   addresses Address[]
@@ -202,6 +202,7 @@ model Shop {
   reviews   Review[]
   savedBy   SavedShop[]
   qrCodes   QRCode[]
+  payments  Payment[]
   suggestionItems SuggestionItem[] // ← ADD THIS
   compareItems CompareItem[]    // <-- add this line
   @@map("shops")
@@ -304,20 +305,26 @@ model ReviewTag {
 // 9. REVIEWS
 // ============================================
 model Review {
-  id        String   @id @default(uuid())
-  shopId    String   @map("shop_id")
-  userId    String   @map("user_id")
-  rating    Int
-  comment   String?
-  createdAt DateTime @default(now()) @map("created_at")
+id String @id @default(uuid())
+shopId String @map("shop_id")
+userId String? @map("user_id")
+rating Int
+comment String?
+isApproved Boolean @default(true)
+anonymous Boolean @default(false)
+paymentId String? @map("payment_id")
+createdAt DateTime @default(now()) @map("created_at")
 
-  // Relations
-  shop    Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tags    ReviewTagLink[]
-  replies ReviewReply[]
+shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+payment Payment? @relation(fields: [paymentId], references: [id], name: "PaymentReviews")
+tags ReviewTagLink[]
+replies ReviewReply[]
+media ReviewMedia[]
 
-  @@map("reviews")
+@@map("reviews")
+@@index([shopId, createdAt])
+@@index([userId, createdAt])
 }
 
 // ============================================
@@ -351,6 +358,19 @@ model ReviewReply {
   admin  User   @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
   @@map("review_replies")
+}
+
+model ReviewMedia {
+  id        String   @id @default(uuid())
+  reviewId  String   @map("review_id")
+  url       String
+  mimeType  String
+  kind      String   // "photo" | "video"
+  createdAt DateTime @default(now()) @map("created_at")
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("review_media")
 }
 
 // ============================================
@@ -409,19 +429,35 @@ enum TransactionStatus {
 // ============================================
 // 14. PAYOUTS
 // ============================================
-model Payout {
-  id            String        @id @default(uuid())
-  userId        String        @map("user_id")
-  requestDate   DateTime      @default(now()) @map("request_date")
-  payoutDate    DateTime?     @map("payout_date")
-  amount        Float
-  paymentMethod PaymentMethod @map("payment_method")
-  status        PayoutStatus  @default(PENDING)
+// Payment model: QR-scan / payment records used to decide "ToReview" items
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+
+model Payment {
+  id        String        @id @default(uuid())
+  userId    String        @map("user_id")
+  shopId    String        @map("shop_id")
+  menuId    String?       @map("menu_id")
+  menuName  String?       @map("menu_name")
+  amount    Float
+  txnRef    String?       @map("txn_ref")    // optional external txn id
+  status    PaymentStatus @default(SUCCESS)
+  isReviewed Boolean      @default(false)    // mark true when review is posted
+  createdAt DateTime      @default(now()) @map("created_at")
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  reviews Review[] @relation("PaymentReviews") // reverse relation (optional)
 
-  @@map("payouts")
+  @@map("payments")
+  @@index([userId])
+  @@index([shopId])
+  @@index([isReviewed])
 }
 
 enum PaymentMethod {
@@ -591,4 +627,18 @@ model CompareItem {
   shop       Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@unique([compareId, shopId])
+}
+
+model ReviewGuideline {
+  id        String   @id @default(uuid())
+  key       String?  @unique @map("key")         // optional programmatic key
+  text      String   @map("text")                // guideline text
+  locale    String   @default("en")              // e.g. "en", "hi"
+  isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("review_guidelines")
+  @@index([locale, isActive, sortOrder])
 }

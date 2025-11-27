@@ -1,212 +1,155 @@
-// seed.js
+// prisma/seedReviewGuidelinesFull.js
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
+const guidelines = [
+  // Intro
+  {
+    key: 'intro',
+    text:
+      'We value authentic, constructive reviews that help others make informed decisions. To ensure your feedback is meaningful, respectful, and legally compliant, please follow these guidelines when submitting a review:',
+    locale: 'en',
+    sortOrder: 0,
+  },
+
+  // Heading: What to Include
+  {
+    key: 'what_to_include_title',
+    text: 'What to Include in Your Review:',
+    locale: 'en',
+    sortOrder: 1,
+  },
+
+  // Bullets under What to Include
+  {
+    key: 'include_genuine_experience',
+    text:
+      'Your Genuine Experience: Share details about your personal experience with the product/service. Be specific—mention what you liked or didn’t like.',
+    locale: 'en',
+    sortOrder: 2,
+  },
+  {
+    key: 'include_helpful_details_title',
+    text: 'Helpful Details: Talk about things like:',
+    locale: 'en',
+    sortOrder: 3,
+  },
+  {
+    key: 'include_helpful_details_quality',
+    text: '• Quality of product/service',
+    locale: 'en',
+    sortOrder: 4,
+  },
+  {
+    key: 'include_helpful_details_timeliness',
+    text: '• Timeliness and responsiveness',
+    locale: 'en',
+    sortOrder: 5,
+  },
+  {
+    key: 'include_helpful_details_support',
+    text: '• Customer support experience',
+    locale: 'en',
+    sortOrder: 6,
+  },
+  {
+    key: 'include_helpful_details_value',
+    text: '• Value for money',
+    locale: 'en',
+    sortOrder: 7,
+  },
+
+  {
+    key: 'include_constructive_feedback',
+    text:
+      "Constructive Feedback: It's okay to be critical, but please be respectful. Suggest ways the business could improve if applicable.",
+    locale: 'en',
+    sortOrder: 8,
+  },
+
+  // Heading: What to Avoid
+  {
+    key: 'what_to_avoid_title',
+    text: 'What to Avoid:',
+    locale: 'en',
+    sortOrder: 9,
+  },
+
+  // Bullets under What to Avoid
+  {
+    key: 'avoid_false_misleading',
+    text:
+      "False or Misleading Information: Don't exaggerate or fabricate any part of your review.",
+    locale: 'en',
+    sortOrder: 10,
+  },
+  {
+    key: 'avoid_personal_attacks',
+    text: 'Personal Attacks: Avoid offensive language, threats, or personal insults.',
+    locale: 'en',
+    sortOrder: 11,
+  },
+  {
+    key: 'avoid_private_information',
+    text:
+      'Private Information: Don’t share private details like phone numbers, addresses, email IDs, or order numbers.',
+    locale: 'en',
+    sortOrder: 12,
+  },
+  {
+    key: 'avoid_promotional_content',
+    text:
+      'Promotional Content: Reviews should not include advertisements, links, or promotional content for other businesses.',
+    locale: 'en',
+    sortOrder: 13,
+  },
+  {
+    key: 'avoid_conflict_of_interest',
+    text:
+      'Conflict of Interest: Do not write a review if you are an employee, owner, or have a personal interest in the business being reviewed.',
+    locale: 'en',
+    sortOrder: 14,
+  },
+
+  // Closing / Agreement
+  {
+    key: 'closing_agreement',
+    text:
+      'By submitting a review you confirm that your feedback is honest and in compliance with these guidelines. Reviews may be moderated and removed if they violate these rules.',
+    locale: 'en',
+    sortOrder: 15,
+  }
+];
+
 async function main() {
-  console.log('🌱 Starting seed...');
-
-  // 1) Ensure main categories exist
-  const categories = {
-    food: await findOrCreateMainCategory('Food & Beverages'),
-    fashion: await findOrCreateMainCategory('Fashion'),
-    electronics: await findOrCreateMainCategory('Electronics & Appliances'),
-    grocery: await findOrCreateMainCategory('Grocery & General Stores'),
-  };
-
-  // 2) Shop definitions (adjust image URLs & details as required)
-  const shopsToSeed = [
-    {
-      name: 'Kuala Food Hub',
-      category: categories.food,
-      description: 'Popular spot for snacks and quick bites',
-      address: 'Food Street, Kuala Lumpur',
-      city: 'Kuala Lumpur',
-      latitude: 3.1362565,
-      longitude: 101.6941514,
-      phoneNumber: '+60123456789',
-      openHours: '09:00 AM - 10:00 PM',
-      logoUrl: 'https://res.cloudinary.com/<your_cloud>/image/upload/v12345/finwo/shops/kuala_food_hub.jpg',
-      avgRating: 4.5,
-      reviewCount: 10,
-    },
-    {
-      name: 'Chennai Spice Corner',
-      category: categories.food,
-      description: 'Authentic South Indian cuisine',
-      address: '456 Anna Salai',
-      city: 'Chennai',
-      latitude: 13.0827,
-      longitude: 80.2707,
-      phoneNumber: '+919876543210',
-      openHours: '10:00 AM - 11:00 PM',
-      logoUrl: 'https://res.cloudinary.com/<your_cloud>/image/upload/v12345/finwo/shops/chennai_spice_corner.jpg',
-      avgRating: 4.2,
-      reviewCount: 8,
-    },
-    {
-      name: 'KL Electronics World',
-      category: categories.electronics,
-      description: 'Latest gadgets and appliances',
-      address: 'Tech Park, Kuala Lumpur',
-      city: 'Kuala Lumpur',
-      latitude: 3.1500,
-      longitude: 101.7100,
-      phoneNumber: '+60111222333',
-      openHours: '10:00 AM - 8:00 PM',
-      logoUrl: 'https://res.cloudinary.com/<your_cloud>/image/upload/v12345/finwo/shops/kl_elec_world.jpg',
-      avgRating: 4.0,
-      reviewCount: 5,
-    },
-    {
-      name: 'Fashion Boutique KL',
-      category: categories.fashion,
-      description: 'Trendy fashion store',
-      address: '789 Pavilion Mall',
-      city: 'Kuala Lumpur',
-      latitude: 3.1490,
-      longitude: 101.7131,
-      phoneNumber: '+60198765432',
-      openHours: '10:00 AM - 9:00 PM',
-      logoUrl: 'https://res.cloudinary.com/<your_cloud>/image/upload/v12345/finwo/shops/fashion_boutique_kl.jpg',
-      avgRating: 4.1,
-      reviewCount: 7,
-    },
-    {
-      name: 'KL Grocery Mart',
-      category: categories.grocery,
-      description: 'Daily essentials and groceries',
-      address: 'Market Road, Kuala Lumpur',
-      city: 'Kuala Lumpur',
-      latitude: 3.1450,
-      longitude: 101.7050,
-      phoneNumber: '+60199887766',
-      openHours: '08:00 AM - 10:00 PM',
-      logoUrl: 'https://res.cloudinary.com/<your_cloud>/image/upload/v12345/finwo/shops/kl_grocery_mart.jpg',
-      avgRating: 4.3,
-      reviewCount: 20,
-    },
-  ];
-
-  for (const s of shopsToSeed) {
-    // find or create shop (matching by name)
-    let shop = await prisma.shop.findFirst({ where: { name: s.name } });
-    if (!shop) {
-      shop = await prisma.shop.create({
-        data: {
-          categoryId: s.category.id,
-          name: s.name,
-          logoUrl: s.logoUrl,
-          description: s.description,
-          address: s.address,
-          city: s.city,
-          latitude: s.latitude,
-          longitude: s.longitude,
-          phoneNumber: s.phoneNumber,
-          openHours: s.openHours,
-          avgRating: s.avgRating,
-          reviewCount: s.reviewCount,
-          isActive: true,
-        },
-      });
-      console.log(`+ Created shop: ${s.name}`);
-    } else {
-      // update some fields if you want to keep them in sync
-      await prisma.shop.update({
-        where: { id: shop.id },
-        data: {
-          logoUrl: s.logoUrl,
-          description: s.description,
-          address: s.address,
-          city: s.city,
-          latitude: s.latitude,
-          longitude: s.longitude,
-          phoneNumber: s.phoneNumber,
-          openHours: s.openHours,
-          avgRating: s.avgRating,
-          reviewCount: s.reviewCount,
-          isActive: true,
-        },
-      });
-      console.log(`~ Updated shop: ${s.name}`);
-    }
-
-    // Clear existing images/amenities/offers for idempotency
-    await prisma.shopImage.deleteMany({ where: { shopId: shop.id } });
-    await prisma.shopAmenity.deleteMany({ where: { shopId: shop.id } });
-    await prisma.shopOffer.deleteMany({ where: { shopId: shop.id } });
-
-    // Add sample images (mark first as primary)
-    const shopImages = [
-      {
-        shopId: shop.id,
-        imageUrl: s.logoUrl,
-        isPrimary: true,
-      },
-      {
-        shopId: shop.id,
-        imageUrl: s.logoUrl.replace('.jpg', '_2.jpg'), // example alt image (replace if needed)
-        isPrimary: false,
-      },
-    ];
-    await prisma.shopImage.createMany({ data: shopImages });
-
-    // Add sample amenities
-    const defaultAmenities = [
-      { shopId: shop.id, name: 'Free WiFi', icon: 'wifi', isAvailable: true },
-      { shopId: shop.id, name: 'Home Delivery', icon: 'delivery', isAvailable: true },
-      { shopId: shop.id, name: 'Parking', icon: 'parking', isAvailable: true },
-    ];
-    // Customize amenities for certain shops (example)
-    let amenitiesToInsert = defaultAmenities;
-    if (s.name.includes('Electronics')) {
-      amenitiesToInsert = [
-        { shopId: shop.id, name: 'Warranty Support', icon: 'warranty', isAvailable: true },
-        { shopId: shop.id, name: 'Parking', icon: 'parking', isAvailable: true },
-      ];
-    }
-    await prisma.shopAmenity.createMany({ data: amenitiesToInsert });
-
-    // Add sample offers
-    const now = new Date();
-    const oneWeekLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    const offers = [
-      {
-        shopId: shop.id,
-        title: `${s.name} - Special Offer`,
-        description: 'Get 10% off on selected items',
-        validFrom: now,
-        validTo: oneWeekLater,
-        terms: 'Valid on orders above $10',
+  console.log('Seeding review guidelines...');
+  const created = [];
+  for (const g of guidelines) {
+    const upserted = await prisma.reviewGuideline.upsert({
+      where: { key: g.key },
+      update: {
+        text: g.text,
+        locale: g.locale,
         isActive: true,
+        sortOrder: g.sortOrder,
       },
-    ];
-    await prisma.shopOffer.createMany({ data: offers });
-
-    console.log(`  ▪ shopImages / shopAmenities / shopOffers created for ${s.name}`);
-  }
-
-  console.log('🎉 Seed completed successfully!');
-}
-
-// helper: find or create main category
-async function findOrCreateMainCategory(name) {
-  let c = await prisma.mainCategory.findFirst({ where: { name } });
-  if (!c) {
-    c = await prisma.mainCategory.create({
-      data: {
-        name,
-        imageUrl: null,
+      create: {
+        key: g.key,
+        text: g.text,
+        locale: g.locale,
         isActive: true,
-      },
+        sortOrder: g.sortOrder,
+      }
     });
-    console.log(`+ Created main category: ${name}`);
+    created.push(upserted.key);
   }
-  return c;
+
+  console.log('Seeded guidelines:', created);
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seed failed:', e);
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {
