@@ -179,7 +179,13 @@ export const searchShops = async (req, res) => {
         let searchRadius = radius ? parseFloat(radius) : 7;
         const sortOption = sortBy || 'relevance';
 
-        const minRatingVal = minRating ? parseFloat(minRating) : 0;
+        let minRatingVal = 0;
+        if (minRating && minRating !== 'any') {
+            minRatingVal = parseFloat(minRating);
+            if (isNaN(minRatingVal) || minRatingVal < 0 || minRatingVal > 5) {
+                return res.status(400).json({ error: 'minRating must be between 0 and 5 or "any"' });
+            }
+        }
         const minPriceVal = minPrice ? parseFloat(minPrice) : null;
         const maxPriceVal = maxPrice ? parseFloat(maxPrice) : null;
 
@@ -408,11 +414,11 @@ export const searchShops = async (req, res) => {
                         ? isShopWithinCustomHours(shop.openHours, customOpenFrom, customOpenTo)
                         : true;  // ← Returns true because hoursFilter is 'any' 
 
-                const ratingFlag = averageRating >= minRatingVal;
+                const ratingFlag = minRatingVal === 0 ? true : averageRating >= minRatingVal;
 
                 const priceFlag =
-                    (minPriceVal == null || (minPriceShop != null && minPriceShop >= minPriceVal)) &&
-                    (maxPriceVal == null || (maxPriceShop != null && maxPriceShop <= maxPriceVal));
+                    (minPriceVal == null || (maxPriceShop != null && maxPriceShop >= minPriceVal)) &&
+                    (maxPriceVal == null || (minPriceShop != null && minPriceShop <= maxPriceVal));
 
                 // filter here
                 if (!hasChipMatch || !openNowFlag || !customHoursFlag || !ratingFlag || !priceFlag) {
