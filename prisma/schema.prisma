@@ -24,6 +24,9 @@ model User {
   createdAt       DateTime   @default(now()) @map("created_at")
   lastLogin       DateTime?  @map("last_login")
   phoneAuthEnabled  Boolean  @default(false)
+  upiId           String? @map("upi_id")          // store UPI id e.g. 765654343567776@ybl
+  securityPinHash String? @map("security_pin_hash")
+  securityPinSet  Boolean  @default(false) @map("security_pin_set")
 
   // Relations
   reviews       Review[]
@@ -530,14 +533,15 @@ enum QRType {
 // 17. SETTINGS
 // ============================================
 model Setting {
-  id                   String   @id @default(uuid())
-  userId               String   @unique @map("user_id")
-  notificationsEnabled Boolean  @default(true) @map("notifications_enabled")
-  darkMode             Boolean  @default(false) @map("dark_mode")
-  appLanguage          String   @default("en") @map("app_language")
-  createdAt            DateTime @default(now()) @map("created_at")
+  id                      String   @id @default(uuid())
+  userId                  String   @unique @map("user_id")
+  notificationsEnabled    Boolean  @default(true) @map("notifications_enabled")
+  reviewNotifications     Boolean  @default(true) @map("review_notifications")
+  paymentNotifications    Boolean  @default(true) @map("payment_notifications")
+  darkMode                Boolean  @default(false) @map("dark_mode")
+  appLanguage             String   @default("en") @map("app_language")
+  createdAt               DateTime @default(now()) @map("created_at")
 
-  // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("settings")
