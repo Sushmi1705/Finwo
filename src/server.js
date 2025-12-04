@@ -13,6 +13,7 @@ import trnsactionRoutes from './routes/transactionRoutes.js';
 import bannerRoutes from './routes/bannerRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import placesRoutes from './routes/placesRoutes.js';
+import notificationRoutes from './routes/notificationsRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -44,6 +45,7 @@ app.use('/api/transactions', trnsactionRoutes);
 app.use('/api/banners', bannerRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/places', placesRoutes);
+app.use('/api/notifications', notificationRoutes)
 
 app.get('/', (req, res) => {
   res.send('Server is running successfully!');

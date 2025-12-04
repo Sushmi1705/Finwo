@@ -646,3 +646,20 @@ model ReviewGuideline {
   @@map("review_guidelines")
   @@index([locale, isActive, sortOrder])
 }
+
+model Notification {
+  id           String   @id @default(uuid())
+  userId       String
+  title        String
+  body         String
+  type         String   // e.g. "review", "payment", "cashback", "promo"
+  amount       Float?   // optional amount related to notification
+  meta         Json?    // JSON metadata (shopId, paymentId, status, link, etc.)
+  isRead       Boolean  @default(false)
+  isDeleted    Boolean  @default(false)
+  isActionable Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}
